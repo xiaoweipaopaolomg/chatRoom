@@ -1,0 +1,4 @@
+add_library(chatroom_domain room_manager.cpp)
+target_include_directories(chatroom_domain PUBLIC ${PROJECT_SOURCE_DIR}/src)
+target_link_libraries(chatroom_domain PUBLIC chatroom_common)
+chatroom_target_defaults(chatroom_domain)

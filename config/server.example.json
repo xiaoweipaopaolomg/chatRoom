@@ -1,0 +1,22 @@
+{
+  "server": {
+    "address": "0.0.0.0",
+    "port": 7777,
+    "backlog": 256,
+    "worker_count": 4,
+    "worker_queue_capacity": 1024,
+    "result_queue_capacity": 4096,
+    "maximum_connections": 10000,
+    "maximum_output_bytes": 1048576
+  },
+  "database": {
+    "enabled": false,
+    "host": "127.0.0.1",
+    "port": 3306,
+    "name": "chatroom",
+    "user": "chatroom",
+    "password": "",
+    "pool_size": 4,
+    "acquire_timeout_ms": 1000
+  }
+}

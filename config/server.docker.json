@@ -1,0 +1,21 @@
+{
+  "server": {
+    "address": "0.0.0.0",
+    "port": 7777,
+    "worker_count": 4,
+    "worker_queue_capacity": 2048,
+    "result_queue_capacity": 8192,
+    "maximum_connections": 10000,
+    "maximum_output_bytes": 1048576
+  },
+  "database": {
+    "enabled": true,
+    "host": "mysql",
+    "port": 3306,
+    "name": "chatroom",
+    "user": "chatroom",
+    "password": "",
+    "pool_size": 8,
+    "acquire_timeout_ms": 1000
+  }
+}

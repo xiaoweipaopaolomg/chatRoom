@@ -1,0 +1,5 @@
+add_library(chatroom_application chat_service.cpp)
+target_include_directories(chatroom_application PUBLIC ${PROJECT_SOURCE_DIR}/src)
+target_link_libraries(chatroom_application PUBLIC
+  chatroom_common chatroom_domain chatroom_persistence chatroom_protocol)
+chatroom_target_defaults(chatroom_application)

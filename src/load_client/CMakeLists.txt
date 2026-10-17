@@ -1,0 +1,16 @@
+add_library(chatroom_load_engine histogram.cpp load_engine.cpp)
+target_include_directories(chatroom_load_engine PUBLIC ${PROJECT_SOURCE_DIR}/src)
+target_link_libraries(chatroom_load_engine PUBLIC chatroom_protocol nlohmann_json::nlohmann_json)
+target_compile_definitions(chatroom_load_engine PRIVATE
+  CHATROOM_BUILD_TYPE="${CMAKE_BUILD_TYPE}")
+chatroom_target_defaults(chatroom_load_engine)
+add_executable(chatroom_load_client main.cpp)
+target_link_libraries(chatroom_load_client PRIVATE chatroom_load_engine)
+chatroom_target_defaults(chatroom_load_client)
+
+if(BUILD_TESTS)
+  add_executable(histogram_test ${PROJECT_SOURCE_DIR}/tests/unit/histogram_test.cpp)
+  target_link_libraries(histogram_test PRIVATE GTest::gtest_main chatroom_load_engine)
+  chatroom_target_defaults(histogram_test)
+  add_test(NAME histogram_test COMMAND histogram_test)
+endif()

@@ -1,0 +1,3 @@
+QMainWindow { background: #f7f8fa; }
+QPushButton { padding: 6px 12px; }
+QTextEdit, QPlainTextEdit, QListWidget, QLineEdit { background: white; border: 1px solid #ccd2da; padding: 4px; }

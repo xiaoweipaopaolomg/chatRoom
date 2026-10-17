@@ -1,0 +1,35 @@
+CREATE TABLE IF NOT EXISTS schema_versions (
+  version INT UNSIGNED PRIMARY KEY,
+  applied_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS rooms (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(64) NOT NULL,
+  creator_nickname VARCHAR(32) NOT NULL,
+  status ENUM('ACTIVE', 'CLOSED') NOT NULL DEFAULT 'ACTIVE',
+  created_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS messages (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  room_id BIGINT UNSIGNED NOT NULL,
+  sender_nickname VARCHAR(32) NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  CONSTRAINT fk_messages_room FOREIGN KEY (room_id) REFERENCES rooms(id),
+  INDEX idx_messages_room_time (room_id, created_at, id)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS membership_events (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  room_id BIGINT UNSIGNED NOT NULL,
+  nickname VARCHAR(32) NOT NULL,
+  event_type ENUM('JOIN', 'LEAVE') NOT NULL,
+  created_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  CONSTRAINT fk_membership_room FOREIGN KEY (room_id) REFERENCES rooms(id),
+  INDEX idx_membership_room_time (room_id, created_at, id)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+
+INSERT INTO schema_versions(version) VALUES (1)
+ON DUPLICATE KEY UPDATE version=VALUES(version);
