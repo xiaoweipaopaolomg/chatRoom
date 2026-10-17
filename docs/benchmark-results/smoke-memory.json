@@ -1,0 +1,34 @@
+{
+  "actual_rate": 99.89108552973427,
+  "command": "out/build/linux-release/src/load_client/chatroom_load_client --host 127.0.0.1 --port 7777 --connections 20 --rooms 4 --rate 100 --duration 10 --output docs/benchmark-results/smoke-memory.json",
+  "complete": true,
+  "counts": {
+    "broadcasts": 4995,
+    "errors": 0,
+    "sent": 999,
+    "unmatched": 0
+  },
+  "environment": {
+    "build_type": "Release",
+    "compiler": "11.4.0",
+    "logical_cpus": 12,
+    "os": "Linux 5.15.0-191-generic"
+  },
+  "git_commit": "84358b09b83613aaf5d19f2466f0aab7a1406489",
+  "latency_us": {
+    "p50": 479,
+    "p95": 607,
+    "p99": 757,
+    "samples": 999
+  },
+  "parameters": {
+    "connections": 20,
+    "duration_seconds": 10,
+    "host": "127.0.0.1",
+    "port": 7777,
+    "rooms": 4,
+    "target_rate": 100.0
+  },
+  "persistence": "memory",
+  "utc_epoch_seconds": 1792207723
+}
