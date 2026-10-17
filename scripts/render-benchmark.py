@@ -22,6 +22,7 @@ This report is generated only from `{args.input}`.
 |---|---:|
 | OS | {data['environment']['os']} |
 | Logical CPUs | {data['environment']['logical_cpus']} |
+| Persistence | {data.get('persistence', 'unspecified')} |
 | Connections | {p['connections']} |
 | Rooms | {p['rooms']} |
 | Duration | {p['duration_seconds']} s |
