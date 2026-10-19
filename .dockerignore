@@ -1,0 +1,12 @@
+.git
+.gitrepo
+.agents
+.codex
+.aws
+.env
+out
+build
+*.log
+*.tmp
+__pycache__
+*.pyc
