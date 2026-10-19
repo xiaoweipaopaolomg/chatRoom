@@ -11,7 +11,7 @@ RUN cmake -S . -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release \
 
 FROM ubuntu:24.04
 ARG DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends libmysqlcppconn7v5 \
+RUN apt-get update && apt-get install -y --no-install-recommends libmysqlcppconn7t64 \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build /build/src/server/chatroom_server /usr/local/bin/chatroom_server
 COPY config/server.docker.json /etc/chatroom/server.json
