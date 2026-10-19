@@ -1,0 +1,53 @@
+{
+  "actual_rate": 99.89802291822842,
+  "command": "out/build/linux-release/src/load_client/chatroom_load_client --host 127.0.0.1 --port 7777 --connections 20 --rooms 4 --rate 100 --duration 10 --output docs/benchmark-results/latest.json",
+  "complete": true,
+  "counts": {
+    "broadcasts": 4995,
+    "errors": 0,
+    "expected_broadcasts": 4995,
+    "sent": 999,
+    "unmatched": 0
+  },
+  "environment": {
+    "build_type": "Release",
+    "compiler": "11.4.0",
+    "logical_cpus": 12,
+    "os": "Linux 5.15.0-191-generic"
+  },
+  "git_commit": "4a668a46b885c561c7e85fb78c199490225266f2",
+  "latency_us": {
+    "p50": 5843,
+    "p95": 9253,
+    "p99": 13501,
+    "samples": 999
+  },
+  "parameters": {
+    "connections": 20,
+    "duration_seconds": 10,
+    "host": "127.0.0.1",
+    "port": 7777,
+    "rooms": 4,
+    "target_rate": 100.0
+  },
+  "persistence": "mysql",
+  "utc_epoch_seconds": 1792399077,
+  "database_verification": {
+    "before": {
+      "rooms": 14,
+      "membership_events": 132,
+      "messages": 2999
+    },
+    "after": {
+      "rooms": 18,
+      "membership_events": 172,
+      "messages": 3998
+    },
+    "delta": {
+      "rooms": 4,
+      "membership_events": 40,
+      "messages": 999
+    },
+    "messages_match_sent": true
+  }
+}
