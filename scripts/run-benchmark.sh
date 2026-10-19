@@ -16,10 +16,12 @@ db_counts() {
 before_counts="$(db_counts)"
 export CHATROOM_GIT_COMMIT="$(git rev-parse HEAD 2>/dev/null || git --git-dir=.gitrepo rev-parse HEAD 2>/dev/null || echo unknown)"
 export CHATROOM_BENCHMARK_PERSISTENCE=mysql
+load_status=0
 out/build/linux-release/src/load_client/chatroom_load_client --host 127.0.0.1 --port 7777 \
-  --connections "$connections" --rooms "$rooms" --rate "$rate" --duration "$duration" --output "$output"
+  --connections "$connections" --rooms "$rooms" --rate "$rate" --duration "$duration" --output "$output" || load_status=$?
 after_counts="$(db_counts)"
 verification_status=0
 python3 scripts/verify-benchmark.py "$output" "$before_counts" "$after_counts" || verification_status=$?
 python3 scripts/render-benchmark.py "$output" docs/benchmark.md
+if ((load_status != 0)); then exit "$load_status"; fi
 exit "$verification_status"

@@ -15,8 +15,11 @@ database = data.get("database_verification")
 database_ok = data.get("persistence") != "mysql" or (
     database is not None and database["messages_match_sent"]
 )
+fanout_ok = c.get("expected_broadcasts") is None or (
+    c["broadcasts"] == c["expected_broadcasts"]
+)
 met = (data.get("complete") is True and c["errors"] == 0 and
-       c["unmatched"] == 0 and database_ok and
+       c["unmatched"] == 0 and fanout_ok and database_ok and
        data["actual_rate"] >= p["target_rate"] * 0.95)
 report = f"""# Benchmark report
 
@@ -36,6 +39,7 @@ This report is generated only from `{args.input}`.
 | Actual rate | {data['actual_rate']:.2f} msg/s |
 | Sent | {c['sent']} |
 | Broadcast deliveries | {c['broadcasts']} |
+| Expected broadcast deliveries | {c.get('expected_broadcasts', 'not recorded')} |
 | Errors | {c['errors']} |
 | Unmatched | {c['unmatched']} |
 | P50 | {l['p50']} µs |

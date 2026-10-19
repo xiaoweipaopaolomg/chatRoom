@@ -18,12 +18,13 @@ try {
   $beforeCounts = docker compose exec -T mysql sh -c $query
   if ($LASTEXITCODE -ne 0) { throw "Initial database count failed" }
   ./out/build/linux-release/src/load_client/chatroom_load_client --host 127.0.0.1 --port 7777 --connections $connections --rooms $rooms --rate $rate --duration $duration --output docs/benchmark-results/latest.json
-  if ($LASTEXITCODE -ne 0) { throw "Load client failed" }
+  $loadExit = $LASTEXITCODE
   $afterCounts = docker compose exec -T mysql sh -c $query
   if ($LASTEXITCODE -ne 0) { throw "Final database count failed" }
   python scripts/verify-benchmark.py docs/benchmark-results/latest.json "$beforeCounts" "$afterCounts"
   $verificationExit = $LASTEXITCODE
   python scripts/render-benchmark.py docs/benchmark-results/latest.json docs/benchmark.md
   if ($LASTEXITCODE -ne 0) { throw "Benchmark report generation failed" }
+  if ($loadExit -ne 0) { throw "Load client did not receive all expected deliveries" }
   if ($verificationExit -ne 0) { throw "Database row-count verification failed" }
 } finally { docker compose down }

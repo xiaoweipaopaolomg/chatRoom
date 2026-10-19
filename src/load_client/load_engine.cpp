@@ -34,8 +34,9 @@ struct LoadEngine::Impl {
   LoadConfig config; int epoll_fd{-1}; std::vector<Client> clients;
   std::unordered_map<int, std::size_t> by_fd;
   std::vector<std::uint64_t> room_ids;
+  std::unordered_map<std::uint64_t, std::uint64_t> room_members;
   std::unordered_map<std::uint64_t, Clock::time_point> pending;
-  Histogram latency_us; std::uint64_t next_request{1}, sent{0}, broadcasts{0}, errors{0};
+  Histogram latency_us; std::uint64_t next_request{1}, sent{0}, broadcasts{0}, expected_broadcasts{0}, errors{0};
 
   void Queue(Client& client, const std::string& type, nlohmann::json payload) {
     const auto id = std::to_string(next_request++);
@@ -107,12 +108,14 @@ nlohmann::json LoadEngine::Run() {
   impl_->room_ids.resize(impl_->config.rooms);for(std::size_t i=0;i<impl_->config.rooms;++i)impl_->room_ids[i]=impl_->clients[i].room_id;
   for(std::size_t i=impl_->config.rooms;i<impl_->clients.size();++i){auto& c=impl_->clients[i];if(c.state!=Impl::State::Identified)continue;c.state=Impl::State::RoomPending;impl_->Queue(c,"room.join",{{"room_id",impl_->room_ids[i%impl_->config.rooms]}});}
   impl_->Wait([&]{for(auto& c:impl_->clients)if(c.state!=Impl::State::InRoom&&c.state!=Impl::State::Failed)return false;return true;});
+  for (const auto& client : impl_->clients)
+    if (client.state == Impl::State::InRoom) ++impl_->room_members[client.room_id];
   const auto start=Clock::now();auto previous=start;double tokens=0;std::size_t cursor=0;
-  while(Clock::now()-start<std::chrono::seconds(impl_->config.duration_seconds)){const auto now=Clock::now();tokens+=std::chrono::duration<double>(now-previous).count()*impl_->config.rate;previous=now;while(tokens>=1.0){auto& c=impl_->clients[cursor++%impl_->clients.size()];if(c.state==Impl::State::InRoom){const auto id=impl_->next_request;impl_->pending[id]=Clock::now();impl_->Queue(c,"chat.send",{{"text","load:"+std::to_string(id)}});++impl_->sent;}tokens-=1.0;}impl_->Poll(1);}
-  const auto drain=Clock::now()+std::chrono::seconds(2);while(!impl_->pending.empty()&&Clock::now()<drain)impl_->Poll(10);
+  while(Clock::now()-start<std::chrono::seconds(impl_->config.duration_seconds)){const auto now=Clock::now();tokens+=std::chrono::duration<double>(now-previous).count()*impl_->config.rate;previous=now;while(tokens>=1.0){auto& c=impl_->clients[cursor++%impl_->clients.size()];if(c.state==Impl::State::InRoom){const auto id=impl_->next_request;impl_->pending[id]=Clock::now();impl_->Queue(c,"chat.send",{{"text","load:"+std::to_string(id)}});++impl_->sent;impl_->expected_broadcasts+=impl_->room_members[c.room_id];}tokens-=1.0;}impl_->Poll(1);}
+  const auto drain=Clock::now()+std::chrono::seconds(2);while((!impl_->pending.empty()||impl_->broadcasts<impl_->expected_broadcasts)&&Clock::now()<drain)impl_->Poll(10);
   utsname system{};uname(&system);const auto elapsed=std::chrono::duration<double>(Clock::now()-start).count();
   const auto wall_time=std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-  return {{"complete",true},{"utc_epoch_seconds",wall_time},{"environment",{{"os",std::string(system.sysname)+" "+system.release},{"logical_cpus",sysconf(_SC_NPROCESSORS_ONLN)},{"compiler",__VERSION__},{"build_type",CHATROOM_BUILD_TYPE}}},{"parameters",{{"host",impl_->config.host},{"port",impl_->config.port},{"connections",impl_->config.connections},{"rooms",impl_->config.rooms},{"target_rate",impl_->config.rate},{"duration_seconds",impl_->config.duration_seconds}}},{"counts",{{"sent",impl_->sent},{"broadcasts",impl_->broadcasts},{"errors",impl_->errors},{"unmatched",impl_->pending.size()}}},{"actual_rate",static_cast<double>(impl_->sent)/elapsed},{"latency_us",{{"samples",impl_->latency_us.size()},{"p50",impl_->latency_us.Percentile(.50)},{"p95",impl_->latency_us.Percentile(.95)},{"p99",impl_->latency_us.Percentile(.99)}}}};
+  return {{"complete",impl_->errors==0&&impl_->pending.empty()&&impl_->broadcasts==impl_->expected_broadcasts},{"utc_epoch_seconds",wall_time},{"environment",{{"os",std::string(system.sysname)+" "+system.release},{"logical_cpus",sysconf(_SC_NPROCESSORS_ONLN)},{"compiler",__VERSION__},{"build_type",CHATROOM_BUILD_TYPE}}},{"parameters",{{"host",impl_->config.host},{"port",impl_->config.port},{"connections",impl_->config.connections},{"rooms",impl_->config.rooms},{"target_rate",impl_->config.rate},{"duration_seconds",impl_->config.duration_seconds}}},{"counts",{{"sent",impl_->sent},{"broadcasts",impl_->broadcasts},{"expected_broadcasts",impl_->expected_broadcasts},{"errors",impl_->errors},{"unmatched",impl_->pending.size()}}},{"actual_rate",static_cast<double>(impl_->sent)/elapsed},{"latency_us",{{"samples",impl_->latency_us.size()},{"p50",impl_->latency_us.Percentile(.50)},{"p95",impl_->latency_us.Percentile(.95)},{"p99",impl_->latency_us.Percentile(.99)}}}};
 }
 
 void LoadEngine::WriteAtomic(const std::string& path,const nlohmann::json& result){const auto temporary=path+".tmp";{std::ofstream output(temporary,std::ios::trunc);if(!output)throw std::runtime_error("cannot open benchmark output");output<<result.dump(2)<<'\n';output.flush();if(!output)throw std::runtime_error("cannot flush benchmark output");}if(std::rename(temporary.c_str(),path.c_str())!=0)throw std::runtime_error("cannot atomically rename benchmark output");}
