@@ -21,6 +21,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument("result")
 parser.add_argument("before")
 parser.add_argument("after")
+parser.add_argument("--resources")
+parser.add_argument("--server-image")
+parser.add_argument("--mysql-image")
+parser.add_argument("--worker-count", type=int)
+parser.add_argument("--db-pool-size", type=int)
+parser.add_argument("--batch-writer-count", type=int)
 args = parser.parse_args()
 
 result_path = Path(args.result)
@@ -35,6 +41,25 @@ result["database_verification"] = {
     "delta": delta,
     "messages_match_sent": matches_sent,
 }
+if args.resources:
+    resources = json.loads(Path(args.resources).read_text(encoding="utf-8"))
+    result["resources"] = {
+        "host_ram_bytes": resources["host_ram_bytes"],
+        "summary": resources["summary"],
+        "samples_file": args.resources,
+    }
+if args.server_image:
+    result.setdefault("environment", {})["server_image_id"] = args.server_image
+if args.mysql_image:
+    result.setdefault("environment", {})["mysql_image_id"] = args.mysql_image
+if any(value is not None for value in (
+    args.worker_count, args.db_pool_size, args.batch_writer_count,
+)):
+    result["server_configuration"] = {
+        "worker_count": args.worker_count,
+        "db_pool_size": args.db_pool_size,
+        "batch_writer_count": args.batch_writer_count,
+    }
 
 temporary = result_path.with_name(result_path.name + ".tmp")
 temporary.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

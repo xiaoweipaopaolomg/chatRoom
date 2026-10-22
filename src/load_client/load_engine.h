@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <string>
 
 #include <nlohmann/json.hpp>
@@ -21,10 +22,14 @@ class LoadEngine {
  public:
   explicit LoadEngine(LoadConfig config);
   ~LoadEngine();
+  LoadEngine(const LoadEngine&) = delete;
+  LoadEngine& operator=(const LoadEngine&) = delete;
+  LoadEngine(LoadEngine&&) noexcept;
+  LoadEngine& operator=(LoadEngine&&) noexcept;
   nlohmann::json Run();
   static void WriteAtomic(const std::string& path, const nlohmann::json& result);
  private:
   struct Impl;
-  Impl* impl_;
+  std::unique_ptr<Impl> impl_;
 };
 }  // namespace chatroom::load

@@ -16,7 +16,7 @@ class Connection {
   int fd() const noexcept { return fd_; }
   ConnectionRef reference() const noexcept { return reference_; }
   protocol::FrameDecoder& decoder() noexcept { return decoder_; }
-  bool QueueOutput(std::string bytes);
+  bool QueueOutput(std::string_view bytes);
   std::string_view PendingOutput() const noexcept;
   void ConsumeWritten(std::size_t bytes);
   bool has_output() const noexcept { return output_offset_ < output_.size(); }

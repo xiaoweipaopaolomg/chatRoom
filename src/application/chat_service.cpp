@@ -1,8 +1,13 @@
 #include "application/chat_service.h"
 
 #include <mutex>
+#include <memory>
+#include <shared_mutex>
 #include <string>
 #include <utility>
+
+#include "protocol/frame_codec.h"
+#include "protocol/limits.h"
 
 namespace chatroom {
 namespace {
@@ -99,10 +104,22 @@ OutboundBatch ChatService::HandleJoin(ConnectionRef sender,
                    {ErrorCode::kRoomNotFound, "room does not exist"});
   }
 
-  std::lock_guard<std::mutex> room_lock(room_locks_.For(room_id));
+  std::lock_guard<std::shared_mutex> room_lock(room_locks_.For(room_id));
   if (rooms_.RoomFor(sender)) {
     return ErrorTo(sender, command.request_id,
                    {ErrorCode::kAlreadyInRoom, "leave the current room first"});
+  }
+  std::vector<std::string> prospective_members;
+  for (const auto member : rooms_.Members(room_id)) {
+    if (const auto online = rooms_.FindSession(member))
+      prospective_members.push_back(online->nickname);
+  }
+  prospective_members.push_back(session->nickname);
+  if (protocol::MakeRoomSnapshot(command.request_id, room_id, room->name,
+                                 prospective_members).dump().size() >
+      protocol::kMaximumFrameBodyBytes) {
+    return ErrorTo(sender, command.request_id,
+                   {ErrorCode::kServerBusy, "room member list exceeds frame limit"});
   }
   try {
     repository_.AppendMembership(room_id, session->nickname, MembershipEventType::kJoin);
@@ -145,7 +162,7 @@ OutboundBatch ChatService::HandleLeave(ConnectionRef sender,
     return ErrorTo(sender, command.request_id,
                    {ErrorCode::kNotInRoom, "join a room first"});
   }
-  std::lock_guard<std::mutex> room_lock(room_locks_.For(*room_id));
+  std::lock_guard<std::shared_mutex> room_lock(room_locks_.For(*room_id));
   try {
     repository_.AppendMembership(*room_id, session->nickname, MembershipEventType::kLeave);
     auto removal = rooms_.Leave(sender);
@@ -176,19 +193,23 @@ OutboundBatch ChatService::HandleChat(ConnectionRef sender,
                    {ErrorCode::kNotInRoom, "join a room first"});
   }
   const auto& text = command.payload.at("text").get_ref<const std::string&>();
-  if (text.size() > 4096) {
+  if (text.size() > protocol::kMaximumChatTextBytes) {
     return ErrorTo(sender, command.request_id,
                    {ErrorCode::kMessageTooLarge, "chat text exceeds 4096 UTF-8 bytes"});
   }
 
-  std::lock_guard<std::mutex> room_lock(room_locks_.For(*room_id));
+  std::shared_lock<std::shared_mutex> room_lock(room_locks_.For(*room_id));
   try {
     const auto record = repository_.AppendMessage(*room_id, session->nickname, text);
-    const auto message = protocol::MakeChatEvent(*room_id, record.id,
-                                                 session->nickname, text);
+    const auto message = std::make_shared<const nlohmann::json>(
+        protocol::MakeChatEvent(*room_id, record.id, session->nickname, text));
+    const auto frame = std::make_shared<const std::string>(
+        protocol::EncodeFrame(message->dump()));
+    const auto members = rooms_.Members(*room_id);
     OutboundBatch output;
-    for (const auto member : rooms_.Members(*room_id)) {
-      output.push_back({member, message});
+    output.reserve(members.size());
+    for (const auto member : members) {
+      output.push_back({member, message, frame});
     }
     return output;
   } catch (const RepositoryException& exception) {
@@ -216,7 +237,7 @@ OutboundBatch ChatService::HandleDisconnect(ConnectionRef connection) noexcept {
                                                           removal->nickname)});
     }
     try {
-      std::lock_guard<std::mutex> room_lock(room_locks_.For(removal->room_id));
+      std::lock_guard<std::shared_mutex> room_lock(room_locks_.For(removal->room_id));
       repository_.AppendMembership(removal->room_id, removal->nickname,
                                    MembershipEventType::kLeave);
     } catch (const RepositoryException&) {

@@ -10,3 +10,8 @@ build
 *.tmp
 __pycache__
 *.pyc
+docs
+tests
+scripts
+migrations
+README.md

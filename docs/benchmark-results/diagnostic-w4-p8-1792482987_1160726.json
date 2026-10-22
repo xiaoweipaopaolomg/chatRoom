@@ -1,0 +1,81 @@
+{
+  "actual_rate": 937.2821272577106,
+  "command": "out/build/linux-release/src/load_client/chatroom_load_client --host 127.0.0.1 --port 7777 --connections 500 --rooms 50 --rate 1000 --duration 30 --output docs/benchmark-results/diagnostic-w4-p8-1792482987_1160726.json",
+  "complete": false,
+  "counts": {
+    "broadcasts": 129861,
+    "error_codes": {
+      "SERVER_BUSY": 9633
+    },
+    "errors": 9633,
+    "expected_broadcasts": 203660,
+    "protocol_errors": 0,
+    "sent": 29999,
+    "server_rejected": 9633,
+    "transport_errors": 0,
+    "unmatched": 7379
+  },
+  "environment": {
+    "build_type": "Release",
+    "compiler": "11.4.0",
+    "logical_cpus": 12,
+    "os": "Linux 5.15.0-191-generic",
+    "server_image_id": "sha256:10b93537fbaef03cc645bcdad0a33c658c0f367822e60f41c5c71425bce23d6d",
+    "mysql_image_id": "sha256:efb212ddf03576a6c0b02b8d364e6a46f21e628308a719db0b0450f8817c0517"
+  },
+  "git_commit": "4d705f28a1e0475ee8a1a008b45fd63218c2c5d6",
+  "git_dirty": true,
+  "latency_us": {
+    "p50": 9480490,
+    "p95": 18071234,
+    "p99": 18826290,
+    "samples": 12987
+  },
+  "parameters": {
+    "connections": 500,
+    "duration_seconds": 30,
+    "host": "127.0.0.1",
+    "port": 7777,
+    "rooms": 50,
+    "target_rate": 1000.0
+  },
+  "persistence": "mysql",
+  "scenario": "diagnostic-w4-p8",
+  "utc_epoch_seconds": 1792483054,
+  "database_verification": {
+    "before": {
+      "rooms": 4,
+      "membership_events": 40,
+      "messages": 299
+    },
+    "after": {
+      "rooms": 54,
+      "membership_events": 540,
+      "messages": 13336
+    },
+    "delta": {
+      "rooms": 50,
+      "membership_events": 500,
+      "messages": 13037
+    },
+    "messages_match_sent": false
+  },
+  "resources": {
+    "host_ram_bytes": 100909907968,
+    "summary": {
+      "server": {
+        "samples": 30,
+        "peak_rss_bytes": 15458304,
+        "mean_cpu_percent": 21.870429047704054,
+        "peak_cpu_percent": 26.97087159325008
+      },
+      "mysql": {
+        "samples": 30,
+        "peak_rss_bytes": 517148672,
+        "mean_cpu_percent": 27.27786621105109,
+        "peak_cpu_percent": 29.9676351036112
+      }
+    },
+    "samples_file": "docs/benchmark-results/diagnostic-w4-p8-1792482987_1160726-resources.json"
+  }
+}

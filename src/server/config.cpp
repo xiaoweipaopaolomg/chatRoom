@@ -1,8 +1,10 @@
 #include "server/config.h"
 
+#include <charconv>
 #include <cstdlib>
 #include <fstream>
 #include <stdexcept>
+#include <string_view>
 
 #include <nlohmann/json.hpp>
 
@@ -12,8 +14,42 @@ template <typename T>
 void Assign(const nlohmann::json& object, const char* key, T& target) {
   if (object.contains(key)) target = object.at(key).get<T>();
 }
+void AssignPort(const nlohmann::json& object, const char* key, std::uint16_t& target) {
+  if (!object.contains(key)) return;
+  const auto& value = object.at(key);
+  if (!value.is_number_unsigned() || value.get<std::uint64_t>() == 0 ||
+      value.get<std::uint64_t>() > 65535)
+    throw std::invalid_argument(std::string(key) + " must be in 1..65535");
+  target = static_cast<std::uint16_t>(value.get<std::uint64_t>());
+}
 std::string Env(const char* name, std::string fallback) {
   const char* value = std::getenv(name); return value ? value : std::move(fallback);
+}
+
+std::uint64_t ParseUnsignedEnvironment(const char* name, const char* value,
+                                       std::uint64_t minimum, std::uint64_t maximum) {
+  const std::string_view text(value);
+  std::uint64_t parsed{};
+  const auto [end, error] = std::from_chars(text.data(), text.data() + text.size(), parsed);
+  if (error != std::errc{} || end != text.data() + text.size() ||
+      parsed < minimum || parsed > maximum) {
+    throw std::invalid_argument(std::string(name) + " must be in " +
+                                std::to_string(minimum) + ".." +
+                                std::to_string(maximum));
+  }
+  return parsed;
+}
+
+void OverridePositiveSize(const char* name, std::size_t& target) {
+  const char* value = std::getenv(name);
+  if (!value) return;
+  target = static_cast<std::size_t>(ParseUnsignedEnvironment(name, value, 1, 256));
+}
+void OverrideBatchWriterCount(std::size_t& target) {
+  const char* value = std::getenv("CHATROOM_BATCH_WRITER_COUNT");
+  if (!value) return;
+  target = static_cast<std::size_t>(ParseUnsignedEnvironment(
+      "CHATROOM_BATCH_WRITER_COUNT", value, 0, 64));
 }
 }  // namespace
 
@@ -25,11 +61,14 @@ ServerConfig LoadConfig(const std::string& path) {
   if (root.contains("server")) {
     const auto& server = root.at("server");
     Assign(server, "address", config.reactor.address);
-    Assign(server, "port", config.reactor.port);
+    AssignPort(server, "port", config.reactor.port);
     Assign(server, "backlog", config.reactor.backlog);
     Assign(server, "maximum_connections", config.reactor.maximum_connections);
     Assign(server, "maximum_output_bytes", config.reactor.maximum_output_bytes);
     Assign(server, "result_queue_capacity", config.reactor.result_queue_capacity);
+    if (server.contains("shutdown_timeout_ms"))
+      config.reactor.shutdown_timeout = std::chrono::milliseconds(
+          server.at("shutdown_timeout_ms").get<int>());
     Assign(server, "worker_count", config.worker_count);
     Assign(server, "worker_queue_capacity", config.worker_queue_capacity);
   }
@@ -37,11 +76,20 @@ ServerConfig LoadConfig(const std::string& path) {
     const auto& database = root.at("database");
     Assign(database, "enabled", config.use_mysql);
     Assign(database, "host", config.database.host);
-    Assign(database, "port", config.database.port);
+    AssignPort(database, "port", config.database.port);
     Assign(database, "name", config.database.database);
     Assign(database, "user", config.database.user);
     Assign(database, "password", config.database.password);
     Assign(database, "pool_size", config.database.pool_size);
+    if (database.contains("message_batch")) {
+      const auto& batch = database.at("message_batch");
+      Assign(batch, "writer_count", config.message_batch.writer_count);
+      Assign(batch, "max_batch_size", config.message_batch.max_batch_size);
+      Assign(batch, "queue_capacity", config.message_batch.queue_capacity);
+      if (batch.contains("max_wait_ms"))
+        config.message_batch.max_wait = std::chrono::milliseconds(
+            batch.at("max_wait_ms").get<int>());
+    }
     if (database.contains("acquire_timeout_ms"))
       config.database.acquire_timeout = std::chrono::milliseconds(
           database.at("acquire_timeout_ms").get<int>());
@@ -50,12 +98,25 @@ ServerConfig LoadConfig(const std::string& path) {
   config.database.database = Env("CHATROOM_DB_NAME", config.database.database);
   config.database.user = Env("CHATROOM_DB_USER", config.database.user);
   config.database.password = Env("CHATROOM_DB_PASSWORD", config.database.password);
-  if (const char* value = std::getenv("CHATROOM_PORT"))
-    config.reactor.port = static_cast<std::uint16_t>(std::stoul(value));
+  OverridePositiveSize("CHATROOM_WORKER_COUNT", config.worker_count);
+  OverridePositiveSize("CHATROOM_DB_POOL_SIZE", config.database.pool_size);
+  OverrideBatchWriterCount(config.message_batch.writer_count);
+  if (const char* value = std::getenv("CHATROOM_PORT")) {
+    config.reactor.port = static_cast<std::uint16_t>(
+        ParseUnsignedEnvironment("CHATROOM_PORT", value, 1, 65'535));
+  }
   if (config.reactor.port == 0 || config.worker_count == 0 ||
+      config.reactor.backlog <= 0 || config.database.port == 0 ||
       config.worker_queue_capacity == 0 || config.reactor.maximum_connections == 0 ||
       config.reactor.maximum_output_bytes == 0 || config.reactor.result_queue_capacity == 0 ||
-      config.database.pool_size == 0 || config.database.acquire_timeout.count() <= 0)
+      config.database.pool_size == 0 || config.database.acquire_timeout.count() <= 0 ||
+      config.reactor.shutdown_timeout.count() <= 0 ||
+      config.message_batch.max_batch_size == 0 ||
+      config.message_batch.max_batch_size > 256 ||
+      config.message_batch.queue_capacity == 0 ||
+      config.message_batch.writer_count > 64 ||
+      config.message_batch.max_wait.count() < 0 ||
+      config.message_batch.writer_count > config.database.pool_size)
     throw std::invalid_argument("server configuration contains a non-positive limit");
   return config;
 }
@@ -64,10 +125,15 @@ std::string ServerConfig::ToSafeString() const {
   nlohmann::json value{{"server", {{"address", reactor.address}, {"port", reactor.port},
       {"worker_count", worker_count}, {"worker_queue_capacity", worker_queue_capacity},
       {"maximum_connections", reactor.maximum_connections},
-      {"maximum_output_bytes", reactor.maximum_output_bytes}}},
+      {"maximum_output_bytes", reactor.maximum_output_bytes},
+      {"shutdown_timeout_ms", reactor.shutdown_timeout.count()}}},
       {"database", {{"enabled", use_mysql}, {"host", database.host},
        {"port", database.port}, {"name", database.database}, {"user", database.user},
-       {"pool_size", database.pool_size}, {"password", "<redacted>"}}}};
+       {"pool_size", database.pool_size}, {"password", "<redacted>"},
+       {"message_batch", {{"writer_count", message_batch.writer_count},
+          {"max_batch_size", message_batch.max_batch_size},
+          {"queue_capacity", message_batch.queue_capacity},
+          {"max_wait_ms", message_batch.max_wait.count()}}}}}};
   return value.dump();
 }
 

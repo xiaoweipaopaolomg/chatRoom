@@ -1,0 +1,41 @@
+{
+  "actual_rate": 99.6389591313374,
+  "command": "out/build/linux-release/src/load_client/chatroom_load_client --host 127.0.0.1 --port 7777 --connections 20 --rooms 4 --rate 100 --duration 3 --output docs/benchmark-results/warmup-diagnostic-b-w128-p128-d120.json",
+  "complete": true,
+  "counts": {
+    "broadcasts": 1495,
+    "error_codes": {},
+    "errors": 0,
+    "expected_broadcasts": 1495,
+    "protocol_errors": 0,
+    "sent": 299,
+    "server_rejected": 0,
+    "transport_errors": 0,
+    "unmatched": 0
+  },
+  "environment": {
+    "build_type": "Release",
+    "compiler": "11.4.0",
+    "logical_cpus": 12,
+    "os": "Linux 5.15.0-191-generic"
+  },
+  "git_commit": "4d705f28a1e0475ee8a1a008b45fd63218c2c5d6",
+  "git_dirty": true,
+  "latency_us": {
+    "p50": 24139,
+    "p95": 104791,
+    "p99": 146772,
+    "samples": 299
+  },
+  "parameters": {
+    "connections": 20,
+    "duration_seconds": 3,
+    "host": "127.0.0.1",
+    "port": 7777,
+    "rooms": 4,
+    "target_rate": 100.0
+  },
+  "persistence": "mysql",
+  "scenario": "warmup-diagnostic-b-w128-p128-d120",
+  "utc_epoch_seconds": 1792599830
+}

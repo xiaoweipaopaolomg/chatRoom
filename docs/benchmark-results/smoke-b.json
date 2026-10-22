@@ -1,0 +1,55 @@
+{
+  "actual_rate": 49.89426115709229,
+  "command": "out/build/linux-release/src/load_client/chatroom_load_client --host 127.0.0.1 --port 7777 --connections 20 --rooms 4 --rate 50 --duration 10 --output docs/benchmark-results/smoke-b.json",
+  "complete": true,
+  "counts": {
+    "broadcasts": 2495,
+    "errors": 0,
+    "expected_broadcasts": 2495,
+    "sent": 499,
+    "unmatched": 0
+  },
+  "environment": {
+    "build_type": "Release",
+    "compiler": "11.4.0",
+    "logical_cpus": 12,
+    "os": "Linux 5.15.0-191-generic"
+  },
+  "git_commit": "4d705f28a1e0475ee8a1a008b45fd63218c2c5d6",
+  "git_dirty": true,
+  "latency_us": {
+    "p50": 6263,
+    "p95": 9665,
+    "p99": 13559,
+    "samples": 499
+  },
+  "parameters": {
+    "connections": 20,
+    "duration_seconds": 10,
+    "host": "127.0.0.1",
+    "port": 7777,
+    "rooms": 4,
+    "target_rate": 50.0
+  },
+  "persistence": "mysql",
+  "scenario": "smoke-b",
+  "utc_epoch_seconds": 1792463678,
+  "database_verification": {
+    "before": {
+      "rooms": 4,
+      "membership_events": 40,
+      "messages": 199
+    },
+    "after": {
+      "rooms": 8,
+      "membership_events": 80,
+      "messages": 698
+    },
+    "delta": {
+      "rooms": 4,
+      "membership_events": 40,
+      "messages": 499
+    },
+    "messages_match_sent": true
+  }
+}

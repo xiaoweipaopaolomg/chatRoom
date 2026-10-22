@@ -1,6 +1,7 @@
 services:
   mysql:
     image: mysql:8.4
+    command: ["--innodb-autoinc-lock-mode=1"]
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_dev_only}
       MYSQL_DATABASE: chatroom
@@ -37,6 +38,9 @@ services:
       CHATROOM_DB_NAME: chatroom
       CHATROOM_DB_USER: chatroom
       CHATROOM_DB_PASSWORD: ${CHATROOM_DB_PASSWORD:-chatroom_dev_only}
+      CHATROOM_WORKER_COUNT: ${CHATROOM_WORKER_COUNT:-256}
+      CHATROOM_DB_POOL_SIZE: ${CHATROOM_DB_POOL_SIZE:-128}
+      CHATROOM_BATCH_WRITER_COUNT: ${CHATROOM_BATCH_WRITER_COUNT:-8}
     ports:
       - "7777:7777"
     stop_grace_period: 10s

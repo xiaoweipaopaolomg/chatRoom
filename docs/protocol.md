@@ -38,3 +38,5 @@ One connection may have one online session and may belong to at most one room.
 Explicit create/join/leave/chat changes become visible only after persistence
 succeeds. Disconnect cleanup is memory-first; recording its LEAVE event is best
 effort.
+If adding a member would make the complete `room.snapshot` exceed the frame
+limit, `room.join` returns `SERVER_BUSY` before recording a JOIN event.

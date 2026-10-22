@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -23,11 +24,13 @@ class KeyedExecutor {
   bool Submit(std::uint64_t key, Task task);
   void Shutdown() noexcept;
   std::size_t worker_count() const noexcept;
+  std::size_t pending() const noexcept { return pending_.load(); }
 
  private:
   struct Lane;
   std::vector<std::unique_ptr<Lane>> lanes_;
   ErrorHandler on_error_;
+  std::atomic<std::size_t> pending_{0};
 };
 
 }  // namespace chatroom

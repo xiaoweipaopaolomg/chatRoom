@@ -33,10 +33,13 @@ int main(int argc, char** argv) {
     std::unique_ptr<chatroom::IChatRepository> repository;
 #ifdef CHATROOM_HAS_MYSQL
     std::unique_ptr<chatroom::MySqlConnectionPool> pool;
+    chatroom::MySqlChatRepository* mysql_repository = nullptr;
     if (config.use_mysql) {
       pool = std::make_unique<chatroom::MySqlConnectionPool>(config.database);
-      auto mysql = std::make_unique<chatroom::MySqlChatRepository>(*pool);
+      auto mysql = std::make_unique<chatroom::MySqlChatRepository>(
+          *pool, config.message_batch);
       mysql->ValidateSchema();
+      mysql_repository = mysql.get();
       repository = std::move(mysql);
     }
 #else
@@ -56,6 +59,16 @@ int main(int argc, char** argv) {
     reactor.Run();
     active_reactor = nullptr;
     executor.Shutdown();
+#ifdef CHATROOM_HAS_MYSQL
+    if (mysql_repository) {
+      const auto metrics = mysql_repository->GetMessageMetrics();
+      logger.Info("server.mysql_message_metrics", {
+          {"attempts", metrics.attempts}, {"failures", metrics.failures},
+          {"total_us", metrics.total_us}, {"insert_us", metrics.insert_us},
+          {"id_query_us", metrics.id_query_us},
+          {"batches", metrics.batches}, {"commit_us", metrics.commit_us}});
+    }
+#endif
     logger.Info("server.stopped");
     return 0;
   } catch (const std::exception& error) {

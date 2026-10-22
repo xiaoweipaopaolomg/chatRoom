@@ -31,18 +31,18 @@ struct Removal {
 
 class RoomManager {
  public:
-  Result<void> RegisterSession(ConnectionRef connection, std::string nickname);
-  Result<void> CreateLoadedRoom(RoomId room_id, std::string name);
-  Result<void> Join(RoomId room_id, ConnectionRef connection);
-  Result<Removal> Leave(ConnectionRef connection);
-  std::optional<Removal> RemoveConnection(ConnectionRef connection);
+  [[nodiscard]] Result<void> RegisterSession(ConnectionRef connection, std::string nickname);
+  [[nodiscard]] Result<void> CreateLoadedRoom(RoomId room_id, std::string name);
+  [[nodiscard]] Result<void> Join(RoomId room_id, ConnectionRef connection);
+  [[nodiscard]] Result<Removal> Leave(ConnectionRef connection);
+  [[nodiscard]] std::optional<Removal> RemoveConnection(ConnectionRef connection);
 
-  std::optional<Session> FindSession(ConnectionRef connection) const;
-  std::optional<Room> FindRoom(RoomId room_id) const;
-  std::vector<ConnectionRef> Members(RoomId room_id) const;
-  std::optional<RoomId> RoomFor(ConnectionRef connection) const;
-  std::size_t SessionCount() const;
-  std::size_t RoomCount() const;
+  [[nodiscard]] std::optional<Session> FindSession(ConnectionRef connection) const;
+  [[nodiscard]] std::optional<Room> FindRoom(RoomId room_id) const;
+  [[nodiscard]] std::vector<ConnectionRef> Members(RoomId room_id) const;
+  [[nodiscard]] std::optional<RoomId> RoomFor(ConnectionRef connection) const;
+  [[nodiscard]] std::size_t SessionCount() const;
+  [[nodiscard]] std::size_t RoomCount() const;
 
  private:
   struct RoomState {

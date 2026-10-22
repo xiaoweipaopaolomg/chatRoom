@@ -4,6 +4,7 @@
 #include <string>
 
 #include "persistence/mysql_connection_pool.h"
+#include "persistence/mysql_chat_repository.h"
 #include "server/reactor.h"
 
 namespace chatroom {
@@ -14,6 +15,7 @@ struct ServerConfig {
   std::size_t worker_queue_capacity{1024};
   bool use_mysql{false};
   MySqlPoolConfig database;
+  MySqlMessageBatchConfig message_batch;
   std::string ToSafeString() const;
 };
 

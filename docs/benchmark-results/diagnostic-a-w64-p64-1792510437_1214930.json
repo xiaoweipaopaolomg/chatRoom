@@ -1,0 +1,83 @@
+{
+  "actual_rate": 4686.765717527493,
+  "command": "out/build/linux-release/src/load_client/chatroom_load_client --host 127.0.0.1 --port 7777 --connections 1000 --rooms 100 --rate 5000 --duration 30 --output docs/benchmark-results/diagnostic-a-w64-p64-1792510437_1214930.json",
+  "complete": false,
+  "counts": {
+    "broadcasts": 818361,
+    "error_codes": {},
+    "errors": 0,
+    "expected_broadcasts": 1499960,
+    "protocol_errors": 0,
+    "sent": 149996,
+    "server_rejected": 0,
+    "transport_errors": 0,
+    "unmatched": 68160
+  },
+  "environment": {
+    "build_type": "Release",
+    "compiler": "11.4.0",
+    "logical_cpus": 12,
+    "os": "Linux 5.15.0-191-generic",
+    "server_image_id": "sha256:503137832a1335c7586386d02967ac5857590bfe0504b0b6bf570b76cb6266b2",
+    "mysql_image_id": "sha256:efb212ddf03576a6c0b02b8d364e6a46f21e628308a719db0b0450f8817c0517"
+  },
+  "git_commit": "4d705f28a1e0475ee8a1a008b45fd63218c2c5d6",
+  "git_dirty": true,
+  "latency_us": {
+    "p50": 7915846,
+    "p95": 14865901,
+    "p99": 15800449,
+    "samples": 81836
+  },
+  "parameters": {
+    "connections": 1000,
+    "duration_seconds": 30,
+    "host": "127.0.0.1",
+    "port": 7777,
+    "rooms": 100,
+    "target_rate": 5000.0
+  },
+  "persistence": "mysql",
+  "scenario": "diagnostic-a-w64-p64",
+  "utc_epoch_seconds": 1792510495,
+  "database_verification": {
+    "before": {
+      "rooms": 4,
+      "membership_events": 40,
+      "messages": 299
+    },
+    "after": {
+      "rooms": 104,
+      "membership_events": 1040,
+      "messages": 82605
+    },
+    "delta": {
+      "rooms": 100,
+      "membership_events": 1000,
+      "messages": 82306
+    },
+    "messages_match_sent": false
+  },
+  "resources": {
+    "host_ram_bytes": 100909907968,
+    "summary": {
+      "server": {
+        "samples": 30,
+        "peak_rss_bytes": 38490112,
+        "mean_cpu_percent": 109.2245523269583,
+        "peak_cpu_percent": 121.84643656812901
+      },
+      "mysql": {
+        "samples": 30,
+        "peak_rss_bytes": 763949056,
+        "mean_cpu_percent": 117.21575166612882,
+        "peak_cpu_percent": 129.8117459654637
+      }
+    },
+    "samples_file": "docs/benchmark-results/diagnostic-a-w64-p64-1792510437_1214930-resources.json"
+  },
+  "server_configuration": {
+    "worker_count": 64,
+    "db_pool_size": 64
+  }
+}

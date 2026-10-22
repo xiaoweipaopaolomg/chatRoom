@@ -7,6 +7,7 @@ if(ENABLE_ASAN AND ENABLE_TSAN)
 endif()
 
 add_library(chatroom_warnings INTERFACE)
+target_compile_features(chatroom_warnings INTERFACE cxx_std_17)
 target_compile_options(chatroom_warnings INTERFACE
   $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall;-Wextra;-Wpedantic;-Wconversion;-Wshadow>
 )

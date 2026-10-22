@@ -1,0 +1,82 @@
+{
+  "actual_rate": 993.3626608785345,
+  "command": "out/build/linux-release/src/load_client/chatroom_load_client --host 127.0.0.1 --port 7777 --connections 500 --rooms 50 --rate 1000 --duration 300 --output docs/benchmark-results/scenario-b-1792483793_1178962.json",
+  "complete": false,
+  "server_configuration": {"worker_count": 16, "db_pool_size": 16},
+  "counts": {
+    "broadcasts": 2196061,
+    "error_codes": {
+      "SERVER_BUSY": 48691
+    },
+    "errors": 48691,
+    "expected_broadcasts": 2513080,
+    "protocol_errors": 0,
+    "sent": 299999,
+    "server_rejected": 48691,
+    "transport_errors": 0,
+    "unmatched": 31702
+  },
+  "environment": {
+    "build_type": "Release",
+    "compiler": "11.4.0",
+    "logical_cpus": 12,
+    "os": "Linux 5.15.0-191-generic",
+    "server_image_id": "sha256:9f9287f556c8972f1ef08052e39e36c3957e96b0a6633c7252cdbc384cbe40fa",
+    "mysql_image_id": "sha256:efb212ddf03576a6c0b02b8d364e6a46f21e628308a719db0b0450f8817c0517"
+  },
+  "git_commit": "4d705f28a1e0475ee8a1a008b45fd63218c2c5d6",
+  "git_dirty": true,
+  "latency_us": {
+    "p50": 35977,
+    "p95": 61083401,
+    "p99": 62065129,
+    "samples": 219606
+  },
+  "parameters": {
+    "connections": 500,
+    "duration_seconds": 300,
+    "host": "127.0.0.1",
+    "port": 7777,
+    "rooms": 50,
+    "target_rate": 1000.0
+  },
+  "persistence": "mysql",
+  "scenario": "scenario-b",
+  "utc_epoch_seconds": 1792484155,
+  "database_verification": {
+    "before": {
+      "rooms": 4,
+      "membership_events": 40,
+      "messages": 2999
+    },
+    "after": {
+      "rooms": 54,
+      "membership_events": 540,
+      "messages": 222735
+    },
+    "delta": {
+      "rooms": 50,
+      "membership_events": 500,
+      "messages": 219736
+    },
+    "messages_match_sent": false
+  },
+  "resources": {
+    "host_ram_bytes": 100909907968,
+    "summary": {
+      "server": {
+        "samples": 300,
+        "peak_rss_bytes": 22827008,
+        "mean_cpu_percent": 39.280649727933934,
+        "peak_cpu_percent": 46.940471220374775
+      },
+      "mysql": {
+        "samples": 300,
+        "peak_rss_bytes": 610484224,
+        "mean_cpu_percent": 45.06699263698835,
+        "peak_cpu_percent": 56.96649214039198
+      }
+    },
+    "samples_file": "docs/benchmark-results/scenario-b-1792483793_1178962-resources.json"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "actual_rate": 99.44907655338092,
+  "command": "out/build/linux-release/src/load_client/chatroom_load_client --host 127.0.0.1 --port 7777 --connections 20 --rooms 4 --rate 100 --duration 2 --output docs/benchmark-results/warmup-smoke-a.json",
+  "complete": true,
+  "counts": {
+    "broadcasts": 995,
+    "errors": 0,
+    "expected_broadcasts": 995,
+    "sent": 199,
+    "unmatched": 0
+  },
+  "environment": {
+    "build_type": "Release",
+    "compiler": "11.4.0",
+    "logical_cpus": 12,
+    "os": "Linux 5.15.0-191-generic"
+  },
+  "git_commit": "4d705f28a1e0475ee8a1a008b45fd63218c2c5d6",
+  "git_dirty": true,
+  "latency_us": {
+    "p50": 5878,
+    "p95": 9492,
+    "p99": 19147,
+    "samples": 199
+  },
+  "parameters": {
+    "connections": 20,
+    "duration_seconds": 2,
+    "host": "127.0.0.1",
+    "port": 7777,
+    "rooms": 4,
+    "target_rate": 100.0
+  },
+  "persistence": "mysql",
+  "scenario": "warmup-smoke-a",
+  "utc_epoch_seconds": 1792464141
+}

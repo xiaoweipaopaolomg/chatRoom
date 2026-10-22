@@ -20,6 +20,7 @@ class ChatTransport : public QObject {
   void disconnected();
   void messageReceived(const QJsonObject& message);
   void protocolError(const QString& message);
+  void transportError(const QString& message);
 
  private slots:
   void onReadyRead();

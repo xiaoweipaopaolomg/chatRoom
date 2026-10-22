@@ -8,10 +8,9 @@
 #include <vector>
 
 #include "common/error.h"
+#include "protocol/limits.h"
 
 namespace chatroom::protocol {
-
-inline constexpr std::size_t kMaximumFrameBodyBytes = 65'536;
 
 std::string EncodeFrame(std::string_view body);
 

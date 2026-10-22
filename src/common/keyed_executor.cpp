@@ -41,6 +41,7 @@ KeyedExecutor::KeyedExecutor(std::size_t workers, std::size_t capacity_per_worke
             }
           }
         }
+        pending_.fetch_sub(1);
       }
     });
   }
@@ -52,7 +53,10 @@ bool KeyedExecutor::Submit(std::uint64_t key, Task task) {
   if (!task) {
     return false;
   }
-  return lanes_[key % lanes_.size()]->queue.TryPush(std::move(task));
+  pending_.fetch_add(1);
+  if (lanes_[key % lanes_.size()]->queue.TryPush(std::move(task))) return true;
+  pending_.fetch_sub(1);
+  return false;
 }
 
 void KeyedExecutor::Shutdown() noexcept {

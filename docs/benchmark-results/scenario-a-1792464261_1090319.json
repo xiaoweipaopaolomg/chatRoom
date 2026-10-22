@@ -1,0 +1,75 @@
+{
+  "actual_rate": 4966.751058441993,
+  "command": "out/build/linux-release/src/load_client/chatroom_load_client --host 127.0.0.1 --port 7777 --connections 1000 --rooms 100 --rate 5000 --duration 300 --output docs/benchmark-results/scenario-a-1792464261_1090319.json",
+  "complete": false,
+  "counts": {
+    "broadcasts": 775261,
+    "errors": 1414622,
+    "expected_broadcasts": 14999990,
+    "sent": 1499999,
+    "unmatched": 1422473
+  },
+  "environment": {
+    "build_type": "Release",
+    "compiler": "11.4.0",
+    "logical_cpus": 12,
+    "os": "Linux 5.15.0-191-generic",
+    "server_image_id": "sha256:11c7261ffa3963525eb54b21e528dcc28eb9402a6533fa669e11af59abb6a518",
+    "mysql_image_id": "sha256:efb212ddf03576a6c0b02b8d364e6a46f21e628308a719db0b0450f8817c0517"
+  },
+  "git_commit": "4d705f28a1e0475ee8a1a008b45fd63218c2c5d6",
+  "git_dirty": true,
+  "latency_us": {
+    "p50": 20353614,
+    "p95": 48943418,
+    "p99": 49243631,
+    "samples": 77526
+  },
+  "parameters": {
+    "connections": 1000,
+    "duration_seconds": 300,
+    "host": "127.0.0.1",
+    "port": 7777,
+    "rooms": 100,
+    "target_rate": 5000.0
+  },
+  "persistence": "mysql",
+  "scenario": "scenario-a",
+  "utc_epoch_seconds": 1792464625,
+  "database_verification": {
+    "before": {
+      "rooms": 4,
+      "membership_events": 40,
+      "messages": 2999
+    },
+    "after": {
+      "rooms": 104,
+      "membership_events": 1040,
+      "messages": 80566
+    },
+    "delta": {
+      "rooms": 100,
+      "membership_events": 1000,
+      "messages": 77567
+    },
+    "messages_match_sent": false
+  },
+  "resources": {
+    "host_ram_bytes": 100909907968,
+    "summary": {
+      "server": {
+        "samples": 300,
+        "peak_rss_bytes": 16420864,
+        "mean_cpu_percent": 36.95495913666923,
+        "peak_cpu_percent": 46.93723562161742
+      },
+      "mysql": {
+        "samples": 300,
+        "peak_rss_bytes": 529973248,
+        "mean_cpu_percent": 19.226014076955607,
+        "peak_cpu_percent": 30.97557993614698
+      }
+    },
+    "samples_file": "docs/benchmark-results/scenario-a-1792464261_1090319-resources.json"
+  }
+}

@@ -3,12 +3,16 @@
 #include <QtEndian>
 #include <QJsonDocument>
 
+#include "protocol/limits.h"
+
 namespace chatroom::qt_client {
 
 ChatTransport::ChatTransport(QObject* parent) : QObject(parent) {
   connect(&socket_, &QTcpSocket::connected, this, &ChatTransport::connected);
   connect(&socket_, &QTcpSocket::disconnected, this, &ChatTransport::disconnected);
   connect(&socket_, &QTcpSocket::readyRead, this, &ChatTransport::onReadyRead);
+  connect(&socket_, &QTcpSocket::errorOccurred, this,
+          [this](QAbstractSocket::SocketError) { emit transportError(socket_.errorString()); });
 }
 
 void ChatTransport::connectToHost(const QString& host, quint16 port) {
@@ -18,7 +22,8 @@ void ChatTransport::disconnectFromHost() { socket_.disconnectFromHost(); }
 
 void ChatTransport::sendCommand(const QJsonObject& command) {
   const QByteArray body = QJsonDocument(command).toJson(QJsonDocument::Compact);
-  if (body.isEmpty() || body.size() > 65536) {
+  if (body.isEmpty() ||
+      body.size() > static_cast<qsizetype>(protocol::kMaximumFrameBodyBytes)) {
     emit protocolError(QStringLiteral("outbound JSON exceeds frame limit")); return;
   }
   QByteArray frame(4, Qt::Uninitialized);
@@ -31,7 +36,7 @@ void ChatTransport::onReadyRead() {
   for (;;) {
     if (input_.size() < 4) return;
     const auto length = qFromBigEndian<quint32>(input_.constData());
-    if (length == 0 || length > 65536) {
+    if (length == 0 || length > protocol::kMaximumFrameBodyBytes) {
       emit protocolError(QStringLiteral("invalid inbound frame length"));
       socket_.abort(); input_.clear(); return;
     }

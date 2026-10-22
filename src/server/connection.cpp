@@ -5,7 +5,7 @@
 
 namespace chatroom {
 
-bool Connection::QueueOutput(std::string bytes) {
+bool Connection::QueueOutput(std::string_view bytes) {
   const std::size_t pending = output_.size() - output_offset_;
   if (bytes.size() > maximum_output_bytes_ - std::min(maximum_output_bytes_, pending)) {
     return false;

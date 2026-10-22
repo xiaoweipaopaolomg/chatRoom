@@ -1,0 +1,90 @@
+{
+  "actual_rate": 4998.838729058587,
+  "command": "out/build/linux-release/src/load_client/chatroom_load_client --host 127.0.0.1 --port 7777 --connections 1000 --rooms 100 --rate 5000 --duration 300 --output docs/benchmark-results/scenario-a-1792600479_1379996.json",
+  "complete": true,
+  "counts": {
+    "broadcasts": 14999960,
+    "error_codes": {},
+    "errors": 0,
+    "expected_broadcasts": 14999960,
+    "protocol_errors": 0,
+    "sent": 1499996,
+    "server_rejected": 0,
+    "transport_errors": 0,
+    "unmatched": 0
+  },
+  "environment": {
+    "build_type": "Release",
+    "compiler": "11.4.0",
+    "logical_cpus": 12,
+    "os": "Linux 5.15.0-191-generic",
+    "server_image_id": "sha256:7c6f742aac32b730c5e9b057bc19a69d6ccfc4cc996c9f0c826de369bc94ab6a",
+    "mysql_image_id": "sha256:efb212ddf03576a6c0b02b8d364e6a46f21e628308a719db0b0450f8817c0517"
+  },
+  "git_commit": "4d705f28a1e0475ee8a1a008b45fd63218c2c5d6",
+  "git_dirty": true,
+  "latency_us": {
+    "p50": 55570,
+    "p95": 85091,
+    "p99": 113915,
+    "samples": 1499996
+  },
+  "parameters": {
+    "connections": 1000,
+    "duration_seconds": 300,
+    "host": "127.0.0.1",
+    "port": 7777,
+    "rooms": 100,
+    "target_rate": 5000.0
+  },
+  "persistence": "mysql",
+  "scenario": "scenario-a",
+  "utc_epoch_seconds": 1792600832,
+  "database_verification": {
+    "before": {
+      "rooms": 4,
+      "membership_events": 40,
+      "messages": 2999
+    },
+    "after": {
+      "rooms": 104,
+      "membership_events": 1320,
+      "messages": 1502995
+    },
+    "delta": {
+      "rooms": 100,
+      "membership_events": 1280,
+      "messages": 1499996
+    },
+    "messages_match_sent": true
+  },
+  "resources": {
+    "host_ram_bytes": 100909907968,
+    "summary": {
+      "server": {
+        "samples": 300,
+        "peak_rss_bytes": 25231360,
+        "mean_cpu_percent": 87.21681503072153,
+        "peak_cpu_percent": 97.92712008726885
+      },
+      "mysql": {
+        "samples": 300,
+        "peak_rss_bytes": 954769408,
+        "mean_cpu_percent": 40.95978042712437,
+        "peak_cpu_percent": 56.93860885144128
+      },
+      "client": {
+        "samples": 300,
+        "peak_rss_bytes": 17182720,
+        "mean_cpu_percent": 61.95888950971834,
+        "peak_cpu_percent": 69.89804817647536
+      }
+    },
+    "samples_file": "docs/benchmark-results/scenario-a-1792600479_1379996-resources.json"
+  },
+  "server_configuration": {
+    "worker_count": 256,
+    "db_pool_size": 128,
+    "batch_writer_count": 8
+  }
+}

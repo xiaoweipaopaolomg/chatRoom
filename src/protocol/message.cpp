@@ -4,6 +4,8 @@
 #include <exception>
 #include <optional>
 
+#include "protocol/limits.h"
+
 namespace chatroom::protocol {
 namespace {
 
@@ -48,7 +50,7 @@ Result<Command> ParseCommand(std::string_view input) {
     return Invalid("type, request_id and object payload are required");
   }
   const auto request_id = root["request_id"].get<std::string>();
-  if (request_id.empty() || request_id.size() > 64) {
+  if (request_id.empty() || request_id.size() > kMaximumRequestIdBytes) {
     return Invalid("request_id must contain 1..64 bytes");
   }
   const auto type_text = root["type"].get<std::string>();
@@ -60,12 +62,13 @@ Result<Command> ParseCommand(std::string_view input) {
   switch (*type) {
     case CommandType::kSessionHello:
       if (!payload.contains("nickname") ||
-          !IsStringBytesInRange(payload["nickname"], 1, 32)) {
+          !IsStringBytesInRange(payload["nickname"], 1, kMaximumNicknameBytes)) {
         return Invalid("nickname must contain 1..32 UTF-8 bytes");
       }
       break;
     case CommandType::kCreateRoom:
-      if (!payload.contains("name") || !IsStringBytesInRange(payload["name"], 1, 64)) {
+      if (!payload.contains("name") ||
+          !IsStringBytesInRange(payload["name"], 1, kMaximumRoomNameBytes)) {
         return Invalid("room name must contain 1..64 UTF-8 bytes");
       }
       break;
@@ -82,7 +85,7 @@ Result<Command> ParseCommand(std::string_view input) {
       if (payload["text"].get_ref<const std::string&>().empty()) {
         return Invalid("chat text must not be empty");
       }
-      if (payload["text"].get_ref<const std::string&>().size() > 4096) {
+      if (payload["text"].get_ref<const std::string&>().size() > kMaximumChatTextBytes) {
         return Error{ErrorCode::kMessageTooLarge, "chat text exceeds 4096 UTF-8 bytes"};
       }
       break;

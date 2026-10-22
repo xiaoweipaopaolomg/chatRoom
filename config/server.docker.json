@@ -2,11 +2,12 @@
   "server": {
     "address": "0.0.0.0",
     "port": 7777,
-    "worker_count": 4,
+    "worker_count": 256,
     "worker_queue_capacity": 2048,
     "result_queue_capacity": 8192,
     "maximum_connections": 10000,
-    "maximum_output_bytes": 1048576
+    "maximum_output_bytes": 1048576,
+    "shutdown_timeout_ms": 5000
   },
   "database": {
     "enabled": true,
@@ -15,7 +16,9 @@
     "name": "chatroom",
     "user": "chatroom",
     "password": "",
-    "pool_size": 8,
+    "pool_size": 128,
+    "message_batch": {"writer_count": 8, "max_batch_size": 32,
+                      "queue_capacity": 1024, "max_wait_ms": 2},
     "acquire_timeout_ms": 1000
   }
 }

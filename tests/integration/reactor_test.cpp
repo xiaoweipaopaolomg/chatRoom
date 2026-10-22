@@ -3,6 +3,7 @@
 #include <unistd.h>
 
 #include <chrono>
+#include <future>
 #include <string>
 #include <thread>
 
@@ -85,4 +86,91 @@ TEST(ReactorTest, FragmentedFrameIsReassembled) {
   ASSERT_EQ(frames.size(), 1U);
   EXPECT_EQ(nlohmann::json::parse(frames[0]).at("type"), "pong");
   close(client); reactor.RequestStop(); server.join(); executor.Shutdown();
+}
+
+TEST(ReactorTest, FullResultQueueDoesNotDropPongResponses) {
+  RoomManager rooms;
+  InMemoryChatRepository repository;
+  ChatService service(rooms, repository);
+  KeyedExecutor executor(1, 128);
+  ReactorConfig config; config.address = "127.0.0.1"; config.port = 0;
+  config.result_queue_capacity = 1;
+  Reactor reactor(config, executor, service);
+  std::thread server([&] { reactor.Run(); });
+  const int client = Connect(reactor.bound_port());
+  ASSERT_GE(client, 0);
+  std::string bytes;
+  for (int index = 0; index < 100; ++index)
+    bytes += protocol::EncodeFrame(nlohmann::json{{"type", "ping"},
+        {"request_id", std::to_string(index)}, {"payload", nlohmann::json::object()}}.dump());
+  ASSERT_EQ(send(client, bytes.data(), bytes.size(), MSG_NOSIGNAL),
+            static_cast<ssize_t>(bytes.size()));
+  const auto frames = ReadFrames(client, 100);
+  EXPECT_EQ(frames.size(), 100U);
+  close(client); reactor.RequestStop(); server.join(); executor.Shutdown();
+}
+
+TEST(ReactorTest, FullWorkerQueueEventuallyCleansDisconnectedSession) {
+  RoomManager rooms;
+  InMemoryChatRepository repository;
+  ChatService service(rooms, repository);
+  KeyedExecutor executor(1, 1);
+  ReactorConfig config; config.address = "127.0.0.1"; config.port = 0;
+  Reactor reactor(config, executor, service);
+  std::thread server([&] { reactor.Run(); });
+  const int client = Connect(reactor.bound_port());
+  ASSERT_GE(client, 0);
+  const auto hello = protocol::EncodeFrame(
+      R"({"type":"session.hello","request_id":"h","payload":{"nickname":"alice"}})");
+  ASSERT_EQ(send(client, hello.data(), hello.size(), MSG_NOSIGNAL),
+            static_cast<ssize_t>(hello.size()));
+  ASSERT_EQ(ReadFrames(client, 1).size(), 1U);
+  ASSERT_EQ(rooms.SessionCount(), 1U);
+  std::promise<void> entered;
+  std::promise<void> release;
+  auto allow_finish = release.get_future().share();
+  ASSERT_TRUE(executor.Submit(0, [&] { entered.set_value(); allow_finish.wait(); }));
+  ASSERT_EQ(entered.get_future().wait_for(std::chrono::seconds(1)), std::future_status::ready);
+  ASSERT_TRUE(executor.Submit(0, [] {}));
+  close(client);
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  release.set_value();
+  const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+  while (rooms.SessionCount() != 0 && std::chrono::steady_clock::now() < deadline)
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  EXPECT_EQ(rooms.SessionCount(), 0U);
+  reactor.RequestStop(); server.join(); executor.Shutdown();
+}
+
+TEST(ReactorTest, ShutdownDrainsAlreadySubmittedResponses) {
+  RoomManager rooms;
+  InMemoryChatRepository repository;
+  ChatService service(rooms, repository);
+  KeyedExecutor executor(1, 128);
+  ReactorConfig config; config.address = "127.0.0.1"; config.port = 0;
+  config.result_queue_capacity = 1;
+  Reactor reactor(config, executor, service);
+  std::thread server([&] { reactor.Run(); });
+  const int client = Connect(reactor.bound_port());
+  ASSERT_GE(client, 0);
+
+  std::promise<void> release;
+  auto allow_finish = release.get_future().share();
+  ASSERT_TRUE(executor.Submit(0, [&] { allow_finish.wait(); }));
+  std::string bytes;
+  for (int index = 0; index < 100; ++index)
+    bytes += protocol::EncodeFrame(nlohmann::json{{"type", "ping"},
+        {"request_id", std::to_string(index)}, {"payload", nlohmann::json::object()}}.dump());
+  EXPECT_EQ(send(client, bytes.data(), bytes.size(), MSG_NOSIGNAL),
+            static_cast<ssize_t>(bytes.size()));
+  const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+  while (executor.pending() < 101 && std::chrono::steady_clock::now() < deadline)
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  const bool submitted = executor.pending() == 101;
+  reactor.RequestStop();
+  release.set_value();
+  const auto frames = ReadFrames(client, 100);
+  server.join(); executor.Shutdown(); close(client);
+  EXPECT_TRUE(submitted);
+  EXPECT_EQ(frames.size(), 100U);
 }

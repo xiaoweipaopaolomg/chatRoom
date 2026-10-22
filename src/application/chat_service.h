@@ -1,5 +1,8 @@
 #pragma once
 
+#include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include <nlohmann/json.hpp>
@@ -13,8 +16,16 @@
 namespace chatroom {
 
 struct Outbound {
+  Outbound(ConnectionRef target, nlohmann::json body,
+           std::shared_ptr<const std::string> frame = {})
+      : recipient(target), message(std::make_shared<const nlohmann::json>(std::move(body))),
+        encoded_frame(std::move(frame)) {}
+  Outbound(ConnectionRef target, std::shared_ptr<const nlohmann::json> body,
+           std::shared_ptr<const std::string> frame)
+      : recipient(target), message(std::move(body)), encoded_frame(std::move(frame)) {}
   ConnectionRef recipient;
-  nlohmann::json message;
+  std::shared_ptr<const nlohmann::json> message;
+  std::shared_ptr<const std::string> encoded_frame;
 };
 
 using OutboundBatch = std::vector<Outbound>;

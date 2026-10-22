@@ -1,0 +1,75 @@
+{
+  "actual_rate": 993.350212228654,
+  "command": "out/build/linux-release/src/load_client/chatroom_load_client --host 127.0.0.1 --port 7777 --connections 500 --rooms 50 --rate 1000 --duration 300 --output docs/benchmark-results/scenario-b-1792464261_1090319.json",
+  "complete": false,
+  "counts": {
+    "broadcasts": 697151,
+    "errors": 222439,
+    "expected_broadcasts": 2999980,
+    "sent": 299998,
+    "unmatched": 230282
+  },
+  "environment": {
+    "build_type": "Release",
+    "compiler": "11.4.0",
+    "logical_cpus": 12,
+    "os": "Linux 5.15.0-191-generic",
+    "server_image_id": "sha256:c8580cf80ed6e75279b2af9bbe97fe9605d9e7a0dbb2ae853534270c898c780e",
+    "mysql_image_id": "sha256:efb212ddf03576a6c0b02b8d364e6a46f21e628308a719db0b0450f8817c0517"
+  },
+  "git_commit": "4d705f28a1e0475ee8a1a008b45fd63218c2c5d6",
+  "git_dirty": true,
+  "latency_us": {
+    "p50": 34467899,
+    "p95": 47433923,
+    "p99": 47984996,
+    "samples": 69716
+  },
+  "parameters": {
+    "connections": 500,
+    "duration_seconds": 300,
+    "host": "127.0.0.1",
+    "port": 7777,
+    "rooms": 50,
+    "target_rate": 1000.0
+  },
+  "persistence": "mysql",
+  "scenario": "scenario-b",
+  "utc_epoch_seconds": 1792464995,
+  "database_verification": {
+    "before": {
+      "rooms": 4,
+      "membership_events": 40,
+      "messages": 2999
+    },
+    "after": {
+      "rooms": 54,
+      "membership_events": 540,
+      "messages": 72743
+    },
+    "delta": {
+      "rooms": 50,
+      "membership_events": 500,
+      "messages": 69744
+    },
+    "messages_match_sent": false
+  },
+  "resources": {
+    "host_ram_bytes": 100909907968,
+    "summary": {
+      "server": {
+        "samples": 300,
+        "peak_rss_bytes": 15835136,
+        "mean_cpu_percent": 20.94081162372741,
+        "peak_cpu_percent": 27.956753752363934
+      },
+      "mysql": {
+        "samples": 300,
+        "peak_rss_bytes": 525778944,
+        "mean_cpu_percent": 20.817326422242186,
+        "peak_cpu_percent": 30.95848244697632
+      }
+    },
+    "samples_file": "docs/benchmark-results/scenario-b-1792464261_1090319-resources.json"
+  }
+}

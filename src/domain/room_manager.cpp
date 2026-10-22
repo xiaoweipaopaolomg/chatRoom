@@ -7,10 +7,10 @@ namespace chatroom {
 
 Result<void> RoomManager::RegisterSession(ConnectionRef connection, std::string nickname) {
   std::lock_guard<std::mutex> lock(sessions_mutex_);
-  if (sessions_.find(connection) != sessions_.end()) {
+  if (const auto found = sessions_.find(connection); found != sessions_.end()) {
     return Error{ErrorCode::kInvalidMessage, "connection already has a session"};
   }
-  if (nicknames_.find(nickname) != nicknames_.end()) {
+  if (const auto found = nicknames_.find(nickname); found != nicknames_.end()) {
     return Error{ErrorCode::kNicknameTaken, "nickname is already online"};
   }
   Session session{connection, std::move(nickname)};
@@ -24,9 +24,9 @@ Result<void> RoomManager::CreateLoadedRoom(RoomId room_id, std::string name) {
     return Error{ErrorCode::kInvalidMessage, "room id and name are required"};
   }
   std::lock_guard<std::mutex> lock(rooms_mutex_);
-  const auto inserted = rooms_.emplace(
+  const auto insertion = rooms_.emplace(
       room_id, std::make_shared<RoomState>(room_id, std::move(name)));
-  if (!inserted.second) {
+  if (!insertion.second) {
     return Error{ErrorCode::kInvalidMessage, "room id already exists"};
   }
   return {};
@@ -34,8 +34,8 @@ Result<void> RoomManager::CreateLoadedRoom(RoomId room_id, std::string name) {
 
 std::shared_ptr<RoomManager::RoomState> RoomManager::FindRoomState(RoomId room_id) const {
   std::lock_guard<std::mutex> lock(rooms_mutex_);
-  const auto found = rooms_.find(room_id);
-  return found == rooms_.end() ? nullptr : found->second;
+  if (const auto found = rooms_.find(room_id); found != rooms_.end()) return found->second;
+  return nullptr;
 }
 
 Result<void> RoomManager::Join(RoomId room_id, ConnectionRef connection) {
@@ -49,7 +49,8 @@ Result<void> RoomManager::Join(RoomId room_id, ConnectionRef connection) {
     return Error{ErrorCode::kRoomNotFound, "room does not exist"};
   }
   std::lock_guard<std::mutex> membership_lock(membership_mutex_);
-  if (room_by_connection_.find(connection) != room_by_connection_.end()) {
+  if (const auto found = room_by_connection_.find(connection);
+      found != room_by_connection_.end()) {
     return Error{ErrorCode::kAlreadyInRoom, "connection is already in a room"};
   }
   std::lock_guard<std::mutex> room_lock(room->mutex);
@@ -119,11 +120,10 @@ std::optional<Removal> RoomManager::RemoveConnection(ConnectionRef connection) {
 
 std::optional<Session> RoomManager::FindSession(ConnectionRef connection) const {
   std::lock_guard<std::mutex> lock(sessions_mutex_);
-  const auto found = sessions_.find(connection);
-  if (found == sessions_.end()) {
-    return std::nullopt;
+  if (const auto found = sessions_.find(connection); found != sessions_.end()) {
+    return found->second;
   }
-  return found->second;
+  return std::nullopt;
 }
 
 std::optional<Room> RoomManager::FindRoom(RoomId room_id) const {
@@ -150,11 +150,11 @@ std::vector<ConnectionRef> RoomManager::Members(RoomId room_id) const {
 
 std::optional<RoomId> RoomManager::RoomFor(ConnectionRef connection) const {
   std::lock_guard<std::mutex> lock(membership_mutex_);
-  const auto found = room_by_connection_.find(connection);
-  if (found == room_by_connection_.end()) {
-    return std::nullopt;
+  if (const auto found = room_by_connection_.find(connection);
+      found != room_by_connection_.end()) {
+    return found->second;
   }
-  return found->second;
+  return std::nullopt;
 }
 
 std::size_t RoomManager::SessionCount() const {

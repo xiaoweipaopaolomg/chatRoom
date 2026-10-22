@@ -1,8 +1,10 @@
 #pragma once
 
 #include <atomic>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -21,6 +23,7 @@ struct ReactorConfig {
   std::size_t maximum_connections{10'000};
   std::size_t maximum_output_bytes{1U << 20U};
   std::size_t result_queue_capacity{4096};
+  std::chrono::milliseconds shutdown_timeout{5000};
 };
 
 class Reactor {
@@ -36,14 +39,16 @@ class Reactor {
   std::uint16_t bound_port() const noexcept { return bound_port_; }
 
  private:
+  void RunLoop();
   void AcceptReady();
   void ConnectionReady(int fd, std::uint32_t events);
   bool ReadReady(Connection& connection);
-  bool WriteReady(Connection& connection);
+  bool WriteReady(Connection& connection, bool output_interest_enabled = true);
   void DrainResults();
   void Deliver(const Outbound& outbound);
   void UpdateInterest(const Connection& connection);
   void CloseConnection(int fd);
+  void RetryDisconnects();
   void Wake() noexcept;
 
   ReactorConfig config_;
@@ -57,6 +62,7 @@ class Reactor {
   std::atomic<bool> stopping_{false};
   std::unordered_map<int, std::unique_ptr<Connection>> connections_;
   std::unordered_map<int, std::uint64_t> generations_;
+  std::deque<ConnectionRef> pending_disconnects_;
 };
 
 }  // namespace chatroom

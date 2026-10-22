@@ -8,6 +8,7 @@
 
 #include <array>
 #include <cerrno>
+#include <chrono>
 #include <cstring>
 #include <stdexcept>
 #include <string>
@@ -57,14 +58,26 @@ void Reactor::Wake() noexcept {
 }
 void Reactor::RequestStop() noexcept { stopping_.store(true); Wake(); }
 bool Reactor::Post(OutboundBatch batch) noexcept {
-  if (!results_.TryPush(std::move(batch))) return false;
+  if (!results_.WaitPush(std::move(batch))) return false;
   Wake(); return true;
 }
 
 void Reactor::Run() {
+  try {
+    RunLoop();
+  } catch (...) {
+    stopping_.store(true);
+    results_.Close();
+    executor_.Shutdown();
+    throw;
+  }
+}
+
+void Reactor::RunLoop() {
   std::array<epoll_event, 128> events{};
   while (!stopping_.load()) {
-    const int count = epoll_wait(epoll_fd_, events.data(), static_cast<int>(events.size()), -1);
+    const int timeout = pending_disconnects_.empty() ? -1 : 20;
+    const int count = epoll_wait(epoll_fd_, events.data(), static_cast<int>(events.size()), timeout);
     if (count < 0) { if (errno == EINTR) continue; throw std::runtime_error("epoll_wait failed"); }
     for (int index = 0; index < count; ++index) {
       const int fd = events[static_cast<std::size_t>(index)].data.fd;
@@ -72,11 +85,40 @@ void Reactor::Run() {
       else if (fd == event_fd_) DrainResults();
       else ConnectionReady(fd, events[static_cast<std::size_t>(index)].events);
     }
+    RetryDisconnects();
   }
   epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, listener_fd_, nullptr);
   close(listener_fd_); listener_fd_ = -1;
-  DrainResults();
+  const auto deadline = std::chrono::steady_clock::now() + config_.shutdown_timeout;
+  while (std::chrono::steady_clock::now() < deadline) {
+    DrainResults();
+    RetryDisconnects();
+    bool output_pending = false;
+    for (const auto& item : connections_) output_pending |= item.second->has_output();
+    if (executor_.pending() == 0 && results_.size() == 0 &&
+        pending_disconnects_.empty() && !output_pending) break;
+    const int count = epoll_wait(epoll_fd_, events.data(), static_cast<int>(events.size()), 20);
+    if (count < 0) { if (errno == EINTR) continue; throw std::runtime_error("epoll_wait failed during shutdown"); }
+    for (int index = 0; index < count; ++index) {
+      const int fd = events[static_cast<std::size_t>(index)].data.fd;
+      const auto flags = events[static_cast<std::size_t>(index)].events;
+      if (fd == event_fd_) { DrainResults(); continue; }
+      auto found = connections_.find(fd);
+      if (found == connections_.end()) continue;
+      if ((flags & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) != 0U ||
+          ((flags & EPOLLOUT) != 0U && !WriteReady(*found->second)))
+        CloseConnection(fd);
+    }
+  }
   while (!connections_.empty()) CloseConnection(connections_.begin()->first);
+  while (executor_.pending() != 0 || !pending_disconnects_.empty() || results_.size() != 0) {
+    DrainResults();
+    RetryDisconnects();
+    if (executor_.pending() == 0 && pending_disconnects_.empty() && results_.size() == 0) break;
+    const int count = epoll_wait(epoll_fd_, events.data(), static_cast<int>(events.size()), 20);
+    if (count < 0 && errno != EINTR) throw std::runtime_error("epoll_wait failed during cleanup");
+  }
+  DrainResults();
 }
 
 void Reactor::AcceptReady() {
@@ -152,7 +194,7 @@ bool Reactor::ReadReady(Connection& connection) {
   }
 }
 
-bool Reactor::WriteReady(Connection& connection) {
+bool Reactor::WriteReady(Connection& connection, bool output_interest_enabled) {
   while (connection.has_output()) {
     const auto pending = connection.PendingOutput();
     const ssize_t count = send(connection.fd(), pending.data(), pending.size(), MSG_NOSIGNAL);
@@ -163,7 +205,8 @@ bool Reactor::WriteReady(Connection& connection) {
     }
     connection.ConsumeWritten(static_cast<std::size_t>(count));
   }
-  UpdateInterest(connection); return true;
+  if (connection.has_output() != output_interest_enabled) UpdateInterest(connection);
+  return true;
 }
 
 void Reactor::DrainResults() {
@@ -171,16 +214,31 @@ void Reactor::DrainResults() {
   while (read(event_fd_, &value, sizeof(value)) > 0) {}
   while (auto batch = results_.TryPop())
     for (const auto& outbound : *batch) Deliver(outbound);
+  RetryDisconnects();
 }
 
 void Reactor::Deliver(const Outbound& outbound) {
   const int fd = static_cast<int>(outbound.recipient.id);
   auto found = connections_.find(fd);
   if (found == connections_.end() || found->second->reference() != outbound.recipient) return;
-  if (!found->second->QueueOutput(protocol::EncodeFrame(outbound.message.dump()))) {
+  std::string frame;
+  std::string_view frame_view;
+  try {
+    if (outbound.encoded_frame) frame_view = *outbound.encoded_frame;
+    else {
+      frame = protocol::EncodeFrame(outbound.message->dump());
+      frame_view = frame;
+    }
+  } catch (const std::length_error&) {
     CloseConnection(fd); return;
   }
-  UpdateInterest(*found->second);
+  const bool already_queued = found->second->has_output();
+  if (!found->second->QueueOutput(frame_view)) {
+    CloseConnection(fd); return;
+  }
+  // Send immediately when the connection was idle. In the common case the
+  // kernel accepts the whole frame, avoiding an EPOLLOUT registration/event.
+  if (!already_queued && !WriteReady(*found->second, false)) CloseConnection(fd);
 }
 
 void Reactor::UpdateInterest(const Connection& connection) {
@@ -194,10 +252,19 @@ void Reactor::CloseConnection(int fd) {
   auto found = connections_.find(fd); if (found == connections_.end()) return;
   const auto reference = found->second->reference();
   epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, nullptr); close(fd); connections_.erase(found);
-  (void)executor_.Submit(reference.id, [this, reference] {
-    auto output = service_.HandleDisconnect(reference);
-    (void)Post(std::move(output));
-  });
+  pending_disconnects_.push_back(reference);
+  RetryDisconnects();
+}
+
+void Reactor::RetryDisconnects() {
+  while (!pending_disconnects_.empty()) {
+    const auto reference = pending_disconnects_.front();
+    if (!executor_.Submit(reference.id, [this, reference] {
+          auto output = service_.HandleDisconnect(reference);
+          (void)Post(std::move(output));
+        })) break;
+    pending_disconnects_.pop_front();
+  }
 }
 
 }  // namespace chatroom

@@ -22,6 +22,7 @@ struct MySqlConnectionPool::Impl {
   std::mutex mutex;
   std::condition_variable available;
   std::deque<std::unique_ptr<sql::Connection>> idle;
+  std::size_t live_count{0};
   bool closing{false};
 };
 
@@ -45,6 +46,7 @@ MySqlConnectionPool::MySqlConnectionPool(MySqlPoolConfig config)
     impl_->driver = sql::mysql::get_mysql_driver_instance();
     for (std::size_t i = 0; i < impl_->config.pool_size; ++i) {
       impl_->idle.push_back(Connect(*impl_->driver, impl_->config));
+      ++impl_->live_count;
     }
   } catch (const sql::SQLException& error) {
     throw RepositoryException(ErrorCode::kDbError,
@@ -63,13 +65,32 @@ MySqlConnectionPool::~MySqlConnectionPool() {
 MySqlConnectionPool::Lease MySqlConnectionPool::Acquire() {
   std::unique_lock<std::mutex> lock(impl_->mutex);
   const bool ready = impl_->available.wait_for(lock, impl_->config.acquire_timeout,
-      [this] { return impl_->closing || !impl_->idle.empty(); });
-  if (!ready || impl_->idle.empty()) {
+      [this] { return impl_->closing || !impl_->idle.empty() ||
+                      impl_->live_count < impl_->config.pool_size; });
+  if (!ready || impl_->closing) {
     throw RepositoryException(ErrorCode::kDbBusy, "database pool acquire timed out");
   }
-  auto connection = std::move(impl_->idle.front());
-  impl_->idle.pop_front();
-  return Lease(this, std::move(connection));
+  if (!impl_->idle.empty()) {
+    auto connection = std::move(impl_->idle.front());
+    impl_->idle.pop_front();
+    return Lease(this, std::move(connection));
+  }
+  ++impl_->live_count;
+  lock.unlock();
+  try {
+    return Lease(this, Connect(*impl_->driver, impl_->config));
+  } catch (const sql::SQLException& error) {
+    std::lock_guard<std::mutex> relock(impl_->mutex);
+    --impl_->live_count;
+    impl_->available.notify_one();
+    throw RepositoryException(ErrorCode::kDbError,
+        "failed to replace MySQL connection: SQLSTATE " + error.getSQLState());
+  } catch (...) {
+    std::lock_guard<std::mutex> relock(impl_->mutex);
+    --impl_->live_count;
+    impl_->available.notify_one();
+    throw;
+  }
 }
 
 const MySqlPoolConfig& MySqlConnectionPool::config() const noexcept {
@@ -88,6 +109,9 @@ void MySqlConnectionPool::Release(std::unique_ptr<sql::Connection> connection,
   std::lock_guard<std::mutex> lock(impl_->mutex);
   if (!impl_->closing && connection) {
     impl_->idle.push_back(std::move(connection));
+    impl_->available.notify_one();
+  } else if (!connection) {
+    --impl_->live_count;
     impl_->available.notify_one();
   }
 }
