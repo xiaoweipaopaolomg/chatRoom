@@ -1,6 +1,7 @@
 /out/
 /build/
 /.env
+/.aws
 *.log
 *.tmp
 .idea/
