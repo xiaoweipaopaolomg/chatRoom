@@ -13,7 +13,7 @@ target_link_libraries(chatroom_qt_client_core PUBLIC
   Qt6::Core Qt6::Network Qt6::Widgets)
 chatroom_target_defaults(chatroom_qt_client_core)
 
-add_executable(chatroom_qt_client main.cpp resources.qrc)
+add_executable(chatroom_qt_client WIN32 main.cpp resources.qrc)
 target_link_libraries(chatroom_qt_client PRIVATE chatroom_qt_client_core)
 chatroom_target_defaults(chatroom_qt_client)
 

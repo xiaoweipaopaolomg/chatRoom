@@ -20,7 +20,7 @@ would exceed the wire-frame limit, and drains submitted work during shutdown.
 
 ## Build and test
 
-Requirements: Linux, CMake 3.25+, Ninja, and a C++17 compiler. CMake first looks
+Requirements: Linux, CMake 3.21+, Ninja, and a C++17 compiler. CMake first looks
 for nlohmann/json 3.11.3 and GoogleTest 1.15.2 locally, then downloads those exact
 versions when absent.
 
@@ -68,6 +68,15 @@ The client uses a Telegram-inspired two-column layout with room/member
 navigation, colored avatars, incoming and outgoing message bubbles, live
 connection state, and a responsive composer. Press Enter to send a message and
 Shift+Enter to insert a new line.
+
+Create a self-contained Windows x64 ZIP from Linux with Docker:
+
+```bash
+./scripts/package-windows.sh
+```
+
+The archive is written to `out/windows/ChatRoom-Windows-x64.zip` and includes
+the Qt and MinGW runtime libraries required on Windows 10/11.
 
 ## C++17 design
 

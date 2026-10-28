@@ -1,5 +1,6 @@
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QCoreApplication>
 #include <QtTest>
 
 #include "qt_client/chat_transport.h"
@@ -11,6 +12,25 @@ class ClientModelTest : public QObject {
   Q_OBJECT
 
  private slots:
+  void connectsToLiveServerWhenConfigured() {
+    const auto host = qEnvironmentVariable("CHATROOM_LIVE_HOST");
+    if (host.isEmpty()) QSKIP("CHATROOM_LIVE_HOST is not set");
+    bool valid_port = false;
+    const auto port = qEnvironmentVariableIntValue("CHATROOM_LIVE_PORT", &valid_port);
+
+    ChatTransport transport;
+    ClientModel model(&transport);
+    QSignalSpy errors(&model, &ClientModel::statusMessage);
+    model.connectToServer(host, valid_port ? static_cast<quint16>(port) : 7777,
+                          QStringLiteral("qt-probe-%1")
+                              .arg(QCoreApplication::applicationPid()));
+
+    QTRY_COMPARE_WITH_TIMEOUT(model.state(), ClientModel::State::Identified, 5000);
+    QCOMPARE(errors.count(), 0);
+    model.disconnectFromServer();
+    QTRY_COMPARE_WITH_TIMEOUT(model.state(), ClientModel::State::Disconnected, 5000);
+  }
+
   void resetsOnDisconnect() {
     ChatTransport transport;
     ClientModel model(&transport);

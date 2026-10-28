@@ -8,17 +8,34 @@
 namespace chatroom::qt_client {
 
 ChatTransport::ChatTransport(QObject* parent) : QObject(parent) {
-  connect(&socket_, &QTcpSocket::connected, this, &ChatTransport::connected);
-  connect(&socket_, &QTcpSocket::disconnected, this, &ChatTransport::disconnected);
+  connect(&socket_, &QTcpSocket::connected, this, [this] {
+    disconnect_requested_ = false;
+    emit connected();
+  });
+  connect(&socket_, &QTcpSocket::disconnected, this, [this] {
+    emit disconnected();
+    disconnect_requested_ = false;
+  });
   connect(&socket_, &QTcpSocket::readyRead, this, &ChatTransport::onReadyRead);
   connect(&socket_, &QTcpSocket::errorOccurred, this,
-          [this](QAbstractSocket::SocketError) { emit transportError(socket_.errorString()); });
+          [this](QAbstractSocket::SocketError error) {
+            if (disconnect_requested_ &&
+                error == QAbstractSocket::RemoteHostClosedError) {
+              return;
+            }
+            emit transportError(socket_.errorString());
+          });
 }
 
 void ChatTransport::connectToHost(const QString& host, quint16 port) {
-  input_.clear(); socket_.connectToHost(host, port);
+  disconnect_requested_ = false;
+  input_.clear();
+  socket_.connectToHost(host, port);
 }
-void ChatTransport::disconnectFromHost() { socket_.disconnectFromHost(); }
+void ChatTransport::disconnectFromHost() {
+  disconnect_requested_ = true;
+  socket_.disconnectFromHost();
+}
 
 void ChatTransport::sendCommand(const QJsonObject& command) {
   const QByteArray body = QJsonDocument(command).toJson(QJsonDocument::Compact);

@@ -28,6 +28,7 @@ class ChatTransport : public QObject {
  private:
   QTcpSocket socket_;
   QByteArray input_;
+  bool disconnect_requested_{false};
 };
 
 }  // namespace chatroom::qt_client

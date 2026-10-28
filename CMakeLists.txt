@@ -1,8 +1,9 @@
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.21)
 project(chatroom VERSION 0.1.0 LANGUAGES CXX)
 
 option(BUILD_SERVER "Build the Linux epoll server" ON)
 option(BUILD_QT_CLIENT "Build the Qt 6 desktop client" OFF)
+option(BUILD_QT_CLIENT_ONLY "Configure only the portable Qt desktop client" OFF)
 option(BUILD_TESTS "Build automated tests" ON)
 option(BUILD_LOAD_TEST "Build the epoll load client" OFF)
 
@@ -15,6 +16,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(cmake/ProjectOptions.cmake)
+
+if(BUILD_QT_CLIENT_ONLY)
+  add_subdirectory(src/qt_client)
+  return()
+endif()
+
 include(cmake/Dependencies.cmake)
 
 if(BUILD_TESTS)
